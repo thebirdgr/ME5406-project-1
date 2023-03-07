@@ -1,11 +1,15 @@
 import gym
+from gym import wrappers
+from gym import envs
+import pprint
+import plotting
+from tqdm import tqdm
 from random import randint
 import math
 import numpy as np
 import matplotlib.pyplot as plt
-from collections import defaultdict # initiatlize:
+from collections import defaultdict# initiatlize:
 from helper import *
-import pprint
 
 env = gym.make('FrozenLake-v1', desc=generate_random_map(size=10, p = 0.75))
 env.render()
@@ -17,42 +21,81 @@ policy = defaultdict(lambda: randint(0,3)) # initialize random actions to the st
 state_action_returns = defaultdict(lambda: 0)
 state_action_count = defaultdict(lambda: 0) # since later we need the average, we need to make sure that we know how many times the state was visited, so as not to overbias with it's high values
 Q = defaultdict(lambda: np.zeros(env.action_space.n))
-pp = pprint.PrettyPrinter(indent=4)
-
-n_episodes = 10000
+size = int(math.sqrt(env.observation_space.n))
+n_episodes = 100000
 
  # Reward schedule:
  #    - Reach goal(G): +1
  #    - Reach hole(H): -1
  #    - Reach frozen(F): 0
-for i_episode in range(n_episodes):
-    curr_state =  env.reset()
+
+def choose_action_es(policy, state, decay):
+    
+    if np.random.random() < decay:
+        return env.action_space.sample() # lesser explored
+    else:
+        return policy[state] # exploitation
+
+decayX = -0.00001
+
+# init_epsilon = 1
+
+timesgoal = 0
+
+epsilon = 1.0
+MINIMUM_EPSILON = 0.0
+REWARD_TARGET = 50 # reach goal in 7 steps
+STEPS_TO_TAKE = REWARD_TARGET
+REWARD_INCREMENT = 0.1
+REWARD_THRESHOLD = 0
+EPSILON_DELTA = (epsilon - MINIMUM_EPSILON)/STEPS_TO_TAKE
+
+steps_needed = []
+
+
+
+for i_episode in tqdm(range(n_episodes)):
+    state =  env.reset()
     start = True # for the starting taking a randoming action, to give us exploring starts, this so that whatever direction it takes, it can reach the goal
     state_action_returns_episode = [] # to track the Q(s,a) in each episode
     states_in_episode = [] # to track S in each episode
+    count  = 0
+    
     while(True): # proceed until you reach you end goals
-        if(start):
-            action = np.random.choice([0,1,2,3])
-            start=False
-        else:
-            action = policy[curr_state]
+        # 1
+        # if(start):
+        #     action = np.random.choice([0,1,2,3])
+        #     start=False
+        # else:
+        #     action = policy[curr_state]
+        # 2
+        
+        action = choose_action_es(policy, state, epsilon)
+        # 3
+        
         next_state, reward, end, probability = env.step(action)
-        if(env.desc[next_state//10][next_state%10] == b"G"):
+        count += 1
+        if(env.desc[next_state//size][next_state%size] == b"G"):
             reward = 1
-        elif(env.desc[next_state//10][next_state%10] == b"H"): # need to add the holes
+            steps_needed.append((i_episode, count))
+        elif(env.desc[next_state//size][next_state%size] == b"H"): # need to add the holes
             reward = -1
         else:
             reward = 0
-        state_action_returns_episode.append(((curr_state, action),reward)) # to match our state_action_returns
-        states_in_episode.append(curr_state)
+        state_action_returns_episode.append(((state, action),reward)) # to match our state_action_returns
+        states_in_episode.append(state)
         if end:
-            if(i_episode >= (n_episodes - 2)):
-                print(reward)
-                print("reached end goal in: ", len(states_in_episode))
+            if(i_episode > n_episodes - 5):
+                # print(reward)
+                print(timesgoal)
+                # print("reached end goal in: ", len(states_in_episode))
             break
-        curr_state = next_state
-        
-# update the state-action pair values 
+        state = next_state
+    # epsilon = epsilon + decayX
+    # if epsilon > MINIMUM_EPSILON and reward >= REWARD_THRESHOLD:    
+    #             epsilon = epsilon - EPSILON_DELTA    # lower the epsilon
+    #             REWARD_THRESHOLD = REWARD_THRESHOLD + REWARD_INCREMENT
+    # update the state-action pair values 
     for ((curr_state, action),reward) in state_action_returns_episode:
         first_occurence_idx = next(i for i,(s_a,r) in enumerate(state_action_returns_episode) if s_a==(curr_state,action))
         g = 0
@@ -60,8 +103,8 @@ for i_episode in range(n_episodes):
             # print(event)
             g += event[1] # at the first round rewards will be 0 as the goal is not reached and it's still exploring
         state_action_count[(curr_state, action)] += 1
-        # if(i_episode > n_episodes - 2):
-        #     print(state_action_returns[(curr_state, action)])
+        # if(i_episode > n_episodes - 5):
+            # print(state_action_returns[(curr_state, action)])
         # new_val = (current_val * N + reward) / N + 1
         state_action_returns[(curr_state, action)] += (state_action_returns[(curr_state, action)] * state_action_count[(curr_state, action)] + g) / (state_action_count[(curr_state, action)] + 1)
         Q[curr_state][action] = state_action_returns[(curr_state, action)]
@@ -75,5 +118,45 @@ for i_episode in range(n_episodes):
                 maximum = Q[pair[0]][pair[1]]
                 policy[curr_state] = pair[1]
                 
-pp.pprint(Q)
-# pp.pprint(policy)
+# pp.pprint(steps_needed)
+steps_goal = []
+steps_end = []
+ratio = []
+for i in range(1000):
+    state = env.reset()
+    steps = 0
+    size = int(math.sqrt(env.observation_space.n))
+    done = False
+    while not done:
+        action = policy[state]
+
+        next_state, reward, done, info = env.step(action)
+        
+        steps += 1
+        if(env.desc[next_state//size][next_state%size] == b"G"):
+            # print(len(steps_per_episode_goal))
+            # print("Steps to reach goal: ", steps)
+            steps_goal.append(steps)
+            reward = 1
+        elif(env.desc[next_state//size][next_state%size] == b"H"): # need to add the holes
+            # print("Steps to reach hsoles: ", steps)
+            steps_end.append(steps)
+            reward = -1
+        else:
+            reward = 0
+        state = next_state
+    ratio.append(len(steps_goal)/len(steps_end))        
+    
+print(f'Ratio: {np.average(ratio)} ')
+
+plt.plot(*zip(*steps_needed))
+plt.rcParams["figure.figsize"] = (30,20)
+plt.xticks(fontsize=20)
+plt.yticks(fontsize=20)
+plt.xlabel("Number of Episodes", fontsize=20)
+plt.ylabel("Number of Steps needed to reach Goal", fontsize=20)
+plt.title("10x10 ES with RBED", fontsize=24)
+text = f'Number of times reached goal during training 1000000 episodes: {len(steps_needed)}'
+plt.figtext(0.5, 0.04, text, wrap=True, horizontalalignment='center', fontsize=24)
+# plt.savefig('es-10-with-rbed.png')
+plt.show()
