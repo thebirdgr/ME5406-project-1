@@ -6,10 +6,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from collections import defaultdict # initiatlize:
 from tqdm import tqdm
-from helper import *
 
 env = gym.make('FrozenLake-v1')
-
 env.render()
 
 # check to see if you can tune these values and how to tune them
@@ -22,6 +20,20 @@ Q_list = []
 # print(env.observation_space.n)
 policy = defaultdict(lambda: 0)
 state = defaultdict(lambda: 0)
+
+# def choose_action_q_learning(Q, state, decay):
+    
+#     min_action = env.action_space.sample() # initiate arbitary action
+#     max_action = env.action_space.sample()
+#     for action in range(env.action_space.n):
+#         if Q[(state, max_action)]["a"] < Q[(state, action)]["a"]:
+#             max_action = action
+#         # if Q[(state, min_action)]["c"] < Q[(state, action)]["c"]:
+#         #     min_action = action
+#     if np.random.random() < decay:
+#         return min_action # lesser explored
+#     else:
+#         return max_action # exploitation
 
 def choose_action_q_learning(Q, state, decay):
     no_actions = env.action_space.n
@@ -42,6 +54,8 @@ def choose_action_q_learning(Q, state, decay):
         else:
             return max_action
 
+# n_episodes = 100000
+# , desc=generate_random_map(size=10, p = 0.75)
 max_steps = 200
 
 steps_per_episode = []
@@ -50,8 +64,12 @@ size = int(math.sqrt(env.observation_space.n))
 
 steps_needed = []
 
+# for n_episodes in tqdm(range(0, 1000000, 250000)):
+    
+    # Q = defaultdict(lambda: np.zeros(env.action_space.n))
+    # Q = defaultdict(lambda: 0)
 Q = defaultdict(lambda: {"a": 0, "c": 0}) # action value and the count
-decayX = -0.0001
+decayX = -0.0005 
 n_episodes = 10000
 epsilon = 1.0
 MINIMUM_EPSILON = 0.0
@@ -63,6 +81,13 @@ EPSILON_DELTA = (epsilon - MINIMUM_EPSILON)/STEPS_TO_TAKE
 
     
 for i_episode in tqdm(range(n_episodes)):
+        
+        # alpha = init_alpha + decayX*i_episode
+        
+        # if i_episode / 100000 > 5:
+        #     epsilon = 0
+        # if alpha < 0:
+            # alpha = 0
         state = env.reset()
         count = 0
         total_reward = 0
@@ -86,7 +111,7 @@ for i_episode in tqdm(range(n_episodes)):
             for a in range(env.action_space.n):
                 if Q[(next_state, next_state_max_action)]["a"] < Q[(next_state, a)]["a"]:
                     next_state_max_action = a
-            Q[(state, action)]["a"] = Q[(state, action)]["a"] + alpha * (total_reward + discount_rate * Q[(next_state, next_state_max_action)]["a"] - Q[(state, action)]["a"])
+            Q[(state, action)]["a"] = Q[(state, action)]["a"] + alpha * (reward + discount_rate * Q[(next_state, next_state_max_action)]["a"] - Q[(state, action)]["a"])
             Q[(state, action)]["c"] += 1 # number of time the state action was visited                         
             if end: # don't include max_steps first
                 # print("Reaching steps in: ", count)
@@ -98,12 +123,14 @@ for i_episode in tqdm(range(n_episodes)):
                     steps_per_episode.append((i_episode, count))
                 break
             state = next_state
-
-        epsilon = epsilon + decayX # works for 10x 10
-
+        # epsilon = epsilon + decayX
+        # if(i_episode % 100000 == 0):
+        #         print("Per episode", i_episode)
         # if epsilon > MINIMUM_EPSILON and reward >= REWARD_THRESHOLD:    
         #         epsilon = epsilon - EPSILON_DELTA    # lower the epsilon
         #         REWARD_THRESHOLD = REWARD_THRESHOLD + REWARD_INCREMENT
+    # print(n_episodes)             
+    # Q_list.append(Q) # get the policies for comparison
         
 steps_goal = []
 steps_end = []
@@ -140,34 +167,34 @@ for i in range(1000):
     # print(len(end_list))
     # y = [np.polyval(curve, p) for p in end_list]
     # axis[r//subplot_size, r%subplot_size].hist(steps_end, color = 'g', orientation='horizontal')
-txt = f'Times reached goal vs times failed ratio: {len(steps_goal)/(len(steps_end)+len(steps_goal))}'
-print(txt)
-# print(steps_goal)
 
-# m1 = np.array(steps_goal).mean(axis=0)
-# st1 = np.array(steps_goal).std(axis=0)
-# fig, ax = plt.subplots()
-# bp = ax.boxplot(steps_goal, showmeans=True)
+# Plotting
+txt = f'Evaluation Success Rate: {len(steps_goal)/(len(steps_end)+len(steps_goal))}'
+plt.rcParams["figure.figsize"] = (30,20)
 
-# for i, line in enumerate(bp['medians']):
-#     x, y = line.get_xydata()[1]
-#     text = f'μ={m1}\n σ={st1}'
-#     ax.annotate(text, xy=(x, y))
+# bar plot
+title = "4x4 Q-Learnings without Epsilon Decay"
+counts, edges, bars = plt.hist(steps_goal, color = 'r', rwidth=0.7)
+plt.bar_label(bars)
+plt.title(f'Without Decay')
+plt.axis(xmin=0,xmax=100)
+plt.xlabel("Steps Taken to Reach Goal", fontsize=20)
+plt.ylabel("Success Count", fontsize=20)
+plt.title(f'{title} - Evaluation', fontsize=24)
+plt.figtext(0.5, 0.03, txt, wrap=True, horizontalalignment='center', fontsize=20)
+# plt.savefig('./Graphs/ql-4-evaluation.png')
+plt.figure()
 
-# # plt.boxplot(steps_goal, showmeans=True)
-# plt.xlabel("Number of Episodes")
-# plt.ylabel("Number of Steps needed to reach Goal")
-# # plt.title("4x4 Q-learning without Epsilon Decay")
-# # text = f'Number of times reached goal during training {n_episodes} episodes: {len(steps_needed)}'
-# # plt.figtext(0.5, 0.06, text, wrap=True, horizontalalignment='center', fontsize=12)
-# # plt.savefig('ql-4-without-epsilon-decay.png')
-# plt.show()
-
+# Training Plot
 plt.plot(*zip(*steps_needed))
-plt.xlabel("Number of Episodes")
-plt.ylabel("Number of Steps needed to reach Goal")
-plt.title("4x4 Sarsa with RBED")
-text = f'Number of times reached goal during training {n_episodes} episodes: {len(steps_needed)}'
-plt.figtext(0.5, 0.06, text, wrap=True, horizontalalignment='center', fontsize=24)
-# plt.savefig('sarsa-4-peculiar-with-epislon-decay.png')
+plt.xlabel("Number of Episodes", fontsize=20)
+plt.ylabel("Number of Steps needed to reach Goal", fontsize=20)
+plt.title(f'{title} - Training')
+t = f'Training Success Rate: {len(steps_needed)/n_episodes}'
+text = f'Number of times reached goal during training {n_episodes} episodes: {len(steps_needed)}\n {t}'
+plt.figtext(0.5, 0.03, text, wrap=True, horizontalalignment='center', fontsize=20)
+
+# plt.xticks(fontsize=20)
+# plt.yticks(fontsize=20)
+# plt.savefig('./Graphs/ql-4-training.png')
 plt.show()

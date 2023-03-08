@@ -11,7 +11,8 @@ import matplotlib.pyplot as plt
 from collections import defaultdict# initiatlize:
 from helper import *
 
-env = gym.make('FrozenLake-v1', desc=generate_random_map(size=10, p = 0.75))
+env = gym.make('FrozenLake-v1')
+# , desc=generate_random_map(size=10, p = 0.75)
 pp = pprint.PrettyPrinter(indent=4)
 
 env.render()
@@ -22,7 +23,7 @@ policy = defaultdict(lambda: randint(0,3)) # initialize random actions to the st
 state_action_returns = defaultdict(lambda: [])
 state_action_count = defaultdict(lambda: 0) # since later we need the average, we need to make sure that we know how many times the state was visited, so as not to overbias with it's high values
 size = int(math.sqrt(env.observation_space.n))
-n_episodes = 100000
+n_episodes = 10000
 
  # Reward schedule:
  #    - Reach goal(G): +1
@@ -52,7 +53,7 @@ def choose_action_es(policy, state, decay):
         else:
             return policy[state]
 
-decayX = -0.00001
+decayX = -0.0001
 
 # init_epsilon = 1
 
@@ -97,9 +98,9 @@ for i_episode in tqdm(range(n_episodes)):
             break
         state = next_state
     # epsilon = epsilon + decayX
-    # if epsilon > MINIMUM_EPSILON and reward >= REWARD_THRESHOLD:    
-    #             epsilon = epsilon - EPSILON_DELTA    # lower the epsilon
-    #             REWARD_THRESHOLD = REWARD_THRESHOLD + REWARD_INCREMENT
+    if epsilon > MINIMUM_EPSILON and reward >= REWARD_THRESHOLD:    
+                epsilon = epsilon - EPSILON_DELTA    # lower the epsilon
+                REWARD_THRESHOLD = REWARD_THRESHOLD + REWARD_INCREMENT
     # update the state-action pair values 
     g = 0
     for ((curr_state, action),reward) in episode:
@@ -111,16 +112,6 @@ for i_episode in tqdm(range(n_episodes)):
             if Q[(state, max_action)] < Q[(state, action)]:
                 max_action = action
         policy[curr_state] = max_action
-        
-
-plt.plot(*zip(*steps_needed))
-plt.xlabel("Number of Episodes")
-plt.ylabel("Number of Steps needed to reach Goal")
-plt.title("4x4 ES with RBED")
-text = f'Number of times reached goal during training {n_episodes} episodes: {len(steps_needed)}'
-plt.figtext(0.5, 0.06, text, wrap=True, horizontalalignment='center', fontsize=12)
-# plt.savefig('es-4-with-rbed.png')
-plt.show()
 
 steps_goal = []
 steps_end = []
@@ -149,6 +140,35 @@ for i in range(1000):
             reward = 0
         state = next_state
     ratio.append(len(steps_goal)/(len(steps_goal) + len(steps_end)))       
-    
-print(f'Ratio: {np.average(ratio)} ')
+
+# Plotting
+txt = f'Evaluation Success Rate: {len(steps_goal)/(len(steps_end)+len(steps_goal))}'
+plt.rcParams["figure.figsize"] = (30,20)
+
+# bar plot
+title = "4x4 MCWES with Epsilon Decay"
+counts, edges, bars = plt.hist(steps_goal, color = 'r', rwidth=0.7)
+plt.bar_label(bars)
+plt.title(f'Without Decay')
+plt.axis(xmin=0,xmax=100)
+plt.xlabel("Steps Taken to Reach Goal", fontsize=20)
+plt.ylabel("Success Count", fontsize=20)
+plt.title(f'{title} - Evaluation', fontsize=24)
+plt.figtext(0.5, 0.03, txt, wrap=True, horizontalalignment='center', fontsize=20)
+# plt.savefig('./Graphs/es-4-evaluation-rbed.png')
+plt.figure()
+
+# Training Plot
+plt.plot(*zip(*steps_needed))
+plt.xlabel("Number of Episodes", fontsize=20)
+plt.ylabel("Number of Steps needed to reach Goal", fontsize=20)
+plt.title(f'{title} - Training')
+t = f'Training Success Rate: {len(steps_needed)/n_episodes}'
+text = f'Number of times reached goal during training {n_episodes} episodes: {len(steps_needed)}\n {t}'
+plt.figtext(0.5, 0.03, text, wrap=True, horizontalalignment='center', fontsize=20)
+
+# plt.xticks(fontsize=20)
+# plt.yticks(fontsize=20)
+# plt.savefig('./Graphs/es-4-training-rbed.png')
+plt.show()
     

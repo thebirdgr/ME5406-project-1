@@ -14,7 +14,7 @@ env.render()
 # check to see if you can tune these values and how to tune them
 alpha = 0.01
 # epsilon = 1
-discount_rate = 1.0
+discount_rate = 0.9
 decayX = -0.0001
 size = int(math.sqrt(env.observation_space.n))
 
@@ -57,10 +57,11 @@ EPSILON_DELTA = (epsilon - MINIMUM_EPSILON)/STEPS_TO_TAKE
 state =  env.reset()
 action = choose_action_sarsa(Q, state, epsilon)
 steps_needed = []
-
+rewards_list = []
+total_reward = 0
 for i_episode in tqdm(range(n_episodes)):
     state =  env.reset()
-    total_reward = 0
+    
     count = 0
     while(True):
         # take action, observe reward and next stateS
@@ -81,20 +82,21 @@ for i_episode in tqdm(range(n_episodes)):
         else:
             reward = 0
         total_reward += reward
-        Q[(state, action)]["a"] = Q[(state, action)]["a"] + alpha * (total_reward + discount_rate * Q[(next_state, next_state_action)]["a"] - Q[(state, action)]["a"])
+        Q[(state, action)]["a"] = Q[(state, action)]["a"] + alpha * (reward + discount_rate * Q[(next_state, next_state_action)]["a"] - Q[(state, action)]["a"])
         Q[(state, action)]["c"] += 1 # number of time the state action was visited              
         count += 1
         if end:
             # print("Reached goal in steps: ", count)
+            rewards_list.append(total_reward*-1)
             break
         state = next_state
         action = next_state_action
         
     # epsilon = epsilon + decayX
     # print(epsilon)
-    # if epsilon > MINIMUM_EPSILON and reward >= REWARD_THRESHOLD:    # works 10x10 100k reward target 25
-    #         epsilon = epsilon - EPSILON_DELTA    # lower the epsilon
-    #         REWARD_THRESHOLD = REWARD_THRESHOLD + REWARD_INCREMENT
+    if epsilon > MINIMUM_EPSILON and reward >= REWARD_THRESHOLD:    # works 10x10 100k reward target 25
+            epsilon = epsilon - EPSILON_DELTA    # lower the epsilon
+            REWARD_THRESHOLD = REWARD_THRESHOLD + REWARD_INCREMENT
     
 # print(Q)
 
@@ -126,14 +128,33 @@ for i in range(1000):
                 reward = 0
             state = next_state
 
-txt = f'Times reached goal vs times failed ratio: {len(steps_goal)/(len(steps_end)+len(steps_goal)+0.001)}'
-print(txt)
+# Plotting
+txt = f'Evaluation Success Rate: {len(steps_goal)/(len(steps_end)+len(steps_goal))}'
+plt.rcParams["figure.figsize"] = (30,20)
 
+# bar plot
+title = "4x4 SARSA without Epsilon Decay"
+counts, edges, bars = plt.hist(steps_goal, color = 'r', rwidth=0.7)
+plt.bar_label(bars)
+plt.title(f'Without Decay')
+plt.axis(xmin=0,xmax=100)
+plt.xlabel("Steps Taken to Reach Goal", fontsize=20)
+plt.ylabel("Success Count", fontsize=20)
+plt.title(f'{title} - Evaluation', fontsize=24)
+plt.figtext(0.5, 0.03, txt, wrap=True, horizontalalignment='center', fontsize=20)
+# plt.savefig('./Graphs/sarsa-4-evaluation-rbed.png')
+plt.figure()
+
+# Training Plot
 plt.plot(*zip(*steps_needed))
-plt.xlabel("Number of Episodes")
-plt.ylabel("Number of Steps needed to reach Goal")
-plt.title("4x4 Sarsa with RBED")
-text = f'Number of times reached goal during training {n_episodes} episodes: {len(steps_needed)}'
-plt.figtext(0.5, 0.06, text, wrap=True, horizontalalignment='center', fontsize=24)
-# plt.savefig('sarsa-4-peculiar-with-epislon-decay.png')
+plt.xlabel("Number of Episodes", fontsize=20)
+plt.ylabel("Number of Steps needed to reach Goal", fontsize=20)
+plt.title(f'{title} - Training')
+t = f'Training Success Rate: {len(steps_needed)/n_episodes}'
+text = f'Number of times reached goal during training {n_episodes} episodes: {len(steps_needed)}\n {t}'
+plt.figtext(0.5, 0.03, text, wrap=True, horizontalalignment='center', fontsize=20)
+
+# plt.xticks(fontsize=20)
+# plt.yticks(fontsize=20)
+# plt.savefig('./Graphs/sarsa-4-training-rbed.png')
 plt.show()

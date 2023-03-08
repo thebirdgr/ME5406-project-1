@@ -12,7 +12,7 @@ env = gym.make('FrozenLake-v1', desc=generate_random_map(size=10, p = 0.75))
 env.render()
 
 # check to see if you can tune these values and how to tune them
-alpha = 0.01
+alpha = 0.1
 # epsilon = 0.8
 discount_rate = 0.9
 
@@ -54,7 +54,7 @@ decayX = -0.00001
 n_episodes = 100000 # 10000 doesn't work
 epsilon = 1.0
 MINIMUM_EPSILON = 0.0
-REWARD_TARGET = 7 # reach goal in 50 steps
+REWARD_TARGET = 50 # reach goal in 50 steps
 STEPS_TO_TAKE = REWARD_TARGET
 REWARD_INCREMENT = 0.1
 REWARD_THRESHOLD = 0
@@ -85,7 +85,7 @@ for i_episode in tqdm(range(n_episodes)):
             for a in range(env.action_space.n):
                 if Q[(next_state, next_state_max_action)]["a"] < Q[(next_state, a)]["a"]:
                     next_state_max_action = a
-            Q[(state, action)]["a"] = Q[(state, action)]["a"] + alpha * (total_reward + discount_rate * Q[(next_state, next_state_max_action)]["a"] - Q[(state, action)]["a"])
+            Q[(state, action)]["a"] = Q[(state, action)]["a"] + alpha * (reward + discount_rate * Q[(next_state, next_state_max_action)]["a"] - Q[(state, action)]["a"])
             Q[(state, action)]["c"] += 1 # number of time the state action was visited                         
             if end: # don't include max_steps first
                 # print("Reaching steps in: ", count)
@@ -98,7 +98,7 @@ for i_episode in tqdm(range(n_episodes)):
                 break
             state = next_state
 
-        epsilon = epsilon + decayX # works for 10x 10
+        # epsilon = epsilon + decayX # works for 10x 10
 
         # if epsilon > MINIMUM_EPSILON and reward >= REWARD_THRESHOLD:    
         #         epsilon = epsilon - EPSILON_DELTA    # lower the epsilon
@@ -139,34 +139,34 @@ for i in range(1000):
     # print(len(end_list))
     # y = [np.polyval(curve, p) for p in end_list]
     # axis[r//subplot_size, r%subplot_size].hist(steps_end, color = 'g', orientation='horizontal')
-txt = f'Times reached goal vs times failed ratio: {len(steps_goal)/(len(steps_end)+len(steps_goal))}'
-print(txt)
-# print(steps_goal)
 
-# m1 = np.array(steps_goal).mean(axis=0)
-# st1 = np.array(steps_goal).std(axis=0)
-# fig, ax = plt.subplots()
-# bp = ax.boxplot(steps_goal, showmeans=True)
+# Plotting
+txt = f'Evaluation Success Rate: {len(steps_goal)/(len(steps_end)+len(steps_goal))}'
+plt.rcParams["figure.figsize"] = (30,20)
 
-# for i, line in enumerate(bp['medians']):
-#     x, y = line.get_xydata()[1]
-#     text = f'μ={m1}\n σ={st1}'
-#     ax.annotate(text, xy=(x, y))
+# bar plot
+title = "10x10 Q-Learnings without Epsilon Decay"
+counts, edges, bars = plt.hist(steps_goal, color = 'r', rwidth=0.7)
+plt.bar_label(bars)
+plt.title(f'Without Decay')
+plt.axis(xmin=0,xmax=100)
+plt.xlabel("Steps Taken to Reach Goal", fontsize=20)
+plt.ylabel("Success Count", fontsize=20)
+plt.title(f'{title} - Evaluation', fontsize=24)
+plt.figtext(0.5, 0.03, txt, wrap=True, horizontalalignment='center', fontsize=20)
+# plt.savefig('./Graphs/ql-10-evaluation-decay.png')
+plt.figure()
 
-# # plt.boxplot(steps_goal, showmeans=True)
-# plt.xlabel("Number of Episodes")
-# plt.ylabel("Number of Steps needed to reach Goal")
-# # plt.title("4x4 Q-learning without Epsilon Decay")
-# # text = f'Number of times reached goal during training {n_episodes} episodes: {len(steps_needed)}'
-# # plt.figtext(0.5, 0.06, text, wrap=True, horizontalalignment='center', fontsize=12)
-# # plt.savefig('ql-4-without-epsilon-decay.png')
-# plt.show()
-
+# Training Plot
 plt.plot(*zip(*steps_needed))
-plt.xlabel("Number of Episodes")
-plt.ylabel("Number of Steps needed to reach Goal")
-plt.title("4x4 Sarsa with RBED")
-text = f'Number of times reached goal during training {n_episodes} episodes: {len(steps_needed)}'
-plt.figtext(0.5, 0.06, text, wrap=True, horizontalalignment='center', fontsize=24)
-# plt.savefig('sarsa-4-peculiar-with-epislon-decay.png')
+plt.xlabel("Number of Episodes", fontsize=20)
+plt.ylabel("Number of Steps needed to reach Goal", fontsize=20)
+plt.title(f'{title} - Training')
+t = f'Training Success Rate: {len(steps_needed)/n_episodes}'
+text = f'Number of times reached goal during training {n_episodes} episodes: {len(steps_needed)}\n {t}'
+plt.figtext(0.5, 0.03, text, wrap=True, horizontalalignment='center', fontsize=20)
+
+# plt.xticks(fontsize=20)
+# plt.yticks(fontsize=20)
+# plt.savefig('./Graphs/ql-10-training-decay.png')
 plt.show()
