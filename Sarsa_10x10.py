@@ -12,10 +12,10 @@ env = gym.make('FrozenLake-v1', desc=generate_random_map(size=10, p = 0.75))
 env.render()
 
 # check to see if you can tune these values and how to tune them
-alpha = 0.01
+alpha = 0.1
 # epsilon = 1
-discount_rate = 1.0
-decayX = -0.0001
+discount_rate = 0.9
+decayX = -0.00005
 size = int(math.sqrt(env.observation_space.n))
 
 
@@ -24,7 +24,7 @@ Q = defaultdict(lambda: {"a": 0, "c": 0}) # action value and the count
 policy = defaultdict(lambda: 0)
 state = defaultdict(lambda: 0)
 
-n_episodes = 10000
+n_episodes = 1000000
 
 max_steps = 100
 
@@ -90,7 +90,7 @@ for i_episode in tqdm(range(n_episodes)):
         state = next_state
         action = next_state_action
         
-    epsilon = epsilon + decayX
+    # epsilon = epsilon + decayX
     # print(epsilon)
     # if epsilon > MINIMUM_EPSILON and reward >= REWARD_THRESHOLD:    # works 10x10 100k reward target 25
     #         epsilon = epsilon - EPSILON_DELTA    # lower the epsilon
@@ -126,14 +126,32 @@ for i in range(1000):
                 reward = 0
             state = next_state
 
-txt = f'Times reached goal vs times failed ratio: {len(steps_goal)/(len(steps_end)+len(steps_goal)+0.001)}'
-print(txt)
+# Plotting
+txt = f'Evaluation Success Rate: {len(steps_goal)/(len(steps_end)+len(steps_goal))}'
+plt.rcParams["figure.figsize"] = (30,20)
 
+# bar plot
+title = "10x10 SARSA without Epsilon Decay"
+counts, edges, bars = plt.hist(steps_goal, color = 'r', rwidth=0.7)
+plt.bar_label(bars)
+plt.axis(xmin=0,xmax=100)
+plt.xlabel("Steps Taken to Reach Goal", fontsize=20)
+plt.ylabel("Success Count", fontsize=20)
+plt.title(f'{title} - Evaluation', fontsize=24)
+plt.figtext(0.5, 0.03, txt, wrap=True, horizontalalignment='center', fontsize=20)
+# plt.savefig('./Graphs/sarsa-10-evaluation.png')
+plt.figure()
+
+# Training Plot
 plt.plot(*zip(*steps_needed))
-plt.xlabel("Number of Episodes")
-plt.ylabel("Number of Steps needed to reach Goal")
-plt.title("4x4 Sarsa with RBED")
-text = f'Number of times reached goal during training {n_episodes} episodes: {len(steps_needed)}'
-plt.figtext(0.5, 0.06, text, wrap=True, horizontalalignment='center', fontsize=24)
-# plt.savefig('sarsa-4-peculiar-with-epislon-decay.png')
+plt.xlabel("Number of Episodes", fontsize=20)
+plt.ylabel("Number of Steps needed to reach Goal", fontsize=20)
+plt.title(f'{title} - Training')
+t = f'Training Success Rate: {len(steps_needed)/n_episodes}'
+text = f'Number of times reached goal during training {n_episodes} episodes: {len(steps_needed)}\n {t}'
+plt.figtext(0.5, 0.03, text, wrap=True, horizontalalignment='center', fontsize=20)
+
+# plt.xticks(fontsize=20)
+# plt.yticks(fontsize=20)
+# plt.savefig('./Graphs/sarsa-10-training.png')
 plt.show()

@@ -147,16 +147,32 @@ for i in range(1000):
         state = next_state
     ratio.append(len(steps_goal)/len(steps_end))        
     
-print(f'Ratio: {np.average(ratio)} ')
-
-plt.plot(*zip(*steps_needed))
+# Plotting
+txt = f'Evaluation Success Rate: {len(steps_goal)/(len(steps_end)+len(steps_goal))}'
 plt.rcParams["figure.figsize"] = (30,20)
-plt.xticks(fontsize=20)
-plt.yticks(fontsize=20)
+
+# bar plot
+title = "10x10 ES with Epsilon Decay"
+counts, edges, bars = plt.hist(steps_goal, color = 'r', rwidth=0.7)
+plt.bar_label(bars)
+plt.axis(xmin=0,xmax=100)
+plt.xlabel("Steps Taken to Reach Goal", fontsize=20)
+plt.ylabel("Success Count", fontsize=20)
+plt.title(f'{title} - Evaluation', fontsize=24)
+plt.figtext(0.5, 0.03, txt, wrap=True, horizontalalignment='center', fontsize=20)
+# plt.savefig('./Graphs/es-10-evaluation.png')
+plt.figure()
+
+# Training Plot
+plt.plot(*zip(*steps_needed))
 plt.xlabel("Number of Episodes", fontsize=20)
 plt.ylabel("Number of Steps needed to reach Goal", fontsize=20)
-plt.title("10x10 ES with RBED", fontsize=24)
-text = f'Number of times reached goal during training 1000000 episodes: {len(steps_needed)}'
-plt.figtext(0.5, 0.04, text, wrap=True, horizontalalignment='center', fontsize=24)
-# plt.savefig('es-10-with-rbed.png')
+plt.title(f'{title} - Training')
+t = f'Training Success Rate: {len(steps_needed)/n_episodes}'
+text = f'Number of times reached goal during training {n_episodes} episodes: {len(steps_needed)}\n {t}'
+plt.figtext(0.5, 0.03, text, wrap=True, horizontalalignment='center', fontsize=20)
+
+# plt.xticks(fontsize=20)
+# plt.yticks(fontsize=20)
+# plt.savefig('./Graphs/es-10-training.png')
 plt.show()

@@ -145,16 +145,15 @@ txt = f'Evaluation Success Rate: {len(steps_goal)/(len(steps_end)+len(steps_goal
 plt.rcParams["figure.figsize"] = (30,20)
 
 # bar plot
-title = "10x10 Q-Learnings without Epsilon Decay"
+# title = "10x10 Q-Learnings without Epsilon Decay"
 counts, edges, bars = plt.hist(steps_goal, color = 'r', rwidth=0.7)
 plt.bar_label(bars)
-plt.title(f'Without Decay')
 plt.axis(xmin=0,xmax=100)
 plt.xlabel("Steps Taken to Reach Goal", fontsize=20)
 plt.ylabel("Success Count", fontsize=20)
 plt.title(f'{title} - Evaluation', fontsize=24)
 plt.figtext(0.5, 0.03, txt, wrap=True, horizontalalignment='center', fontsize=20)
-# plt.savefig('./Graphs/ql-10-evaluation-decay.png')
+# plt.savefig('./Graphs/ql-10-evaluation.png')
 plt.figure()
 
 # Training Plot
@@ -168,5 +167,5 @@ plt.figtext(0.5, 0.03, text, wrap=True, horizontalalignment='center', fontsize=2
 
 # plt.xticks(fontsize=20)
 # plt.yticks(fontsize=20)
-# plt.savefig('./Graphs/ql-10-training-decay.png')
+# plt.savefig('./Graphs/ql-10-training.png')
 plt.show()
