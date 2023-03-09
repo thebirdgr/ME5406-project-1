@@ -7,8 +7,13 @@ import matplotlib.pyplot as plt
 from collections import defaultdict # initiatlize:
 from tqdm import tqdm
 from helper import *
+import csv
+
+# f = open('./csv/sarsa-4-rewards-rbed.csv', 'w')
+# writer = csv.writer(f)
 
 env = gym.make('FrozenLake-v1')
+env.reset()
 env.render()
 
 # check to see if you can tune these values and how to tune them
@@ -27,7 +32,6 @@ state = defaultdict(lambda: 0)
 n_episodes = 10000
 
 max_steps = 100
-
 def choose_action_sarsa(Q, state, decay):
     no_actions = env.action_space.n
     es1 = 1 - decay + (decay / no_actions)
@@ -55,17 +59,21 @@ REWARD_INCREMENT = 0.1
 REWARD_THRESHOLD = 0
 EPSILON_DELTA = (epsilon - MINIMUM_EPSILON)/STEPS_TO_TAKE
 state =  env.reset()
+state = state[0]
 action = choose_action_sarsa(Q, state, epsilon)
 steps_needed = []
+
 rewards_list = []
-total_reward = 0
+tr = 0  
+
 for i_episode in tqdm(range(n_episodes)):
     state =  env.reset()
-    
+    state = state[0]
+    total_reward = 0
     count = 0
     while(True):
         # take action, observe reward and next stateS
-        next_state, reward, end, probability = env.step(action)
+        next_state, reward, end, trunc, info = env.step(action)
         # choose the action for the next state as well using the policy from Q
         next_state_action = choose_action_sarsa(Q, next_state, epsilon)
         
@@ -87,16 +95,18 @@ for i_episode in tqdm(range(n_episodes)):
         count += 1
         if end:
             # print("Reached goal in steps: ", count)
-            rewards_list.append(total_reward*-1)
+            tr += total_reward
+            rewards_list.append(tr)
+            # writer.writerow([i_episode, tr])
             break
         state = next_state
         action = next_state_action
         
     # epsilon = epsilon + decayX
     # print(epsilon)
-    if epsilon > MINIMUM_EPSILON and reward >= REWARD_THRESHOLD:    # works 10x10 100k reward target 25
-            epsilon = epsilon - EPSILON_DELTA    # lower the epsilon
-            REWARD_THRESHOLD = REWARD_THRESHOLD + REWARD_INCREMENT
+    # if epsilon > MINIMUM_EPSILON and reward >= REWARD_THRESHOLD:    # works 10x10 100k reward target 25
+    #         epsilon = epsilon - EPSILON_DELTA    # lower the epsilon
+    #         REWARD_THRESHOLD = REWARD_THRESHOLD + REWARD_INCREMENT
     
 # print(Q)
 
@@ -104,6 +114,7 @@ steps_goal = []
 steps_end = []
 for i in range(1000):
         state = env.reset()
+        state = state[0]
         steps = 0
         size = int(math.sqrt(env.observation_space.n))
         done = False
@@ -113,7 +124,7 @@ for i in range(1000):
                 if Q[(state, max_action)]["a"] < Q[(state, action)]["a"]:
                     max_action = action
 
-            next_state, reward, done, info = env.step(max_action)
+            next_state, reward, done, trunc, info = env.step(max_action)
             steps += 1
             if(env.desc[next_state//size][next_state%size] == b"G"):
                 # print(len(steps_per_episode_goal))
@@ -131,30 +142,31 @@ for i in range(1000):
 # Plotting
 txt = f'Evaluation Success Rate: {len(steps_goal)/(len(steps_end)+len(steps_goal))}'
 plt.rcParams["figure.figsize"] = (30,20)
+print(txt)
+plt.plot(rewards_list)
+# # # bar plot
+# title = "4x4 SARSA with RBED"
+# # counts, edges, bars = plt.hist(steps_goal, color = 'r', rwidth=0.7)
+# # plt.bar_label(bars)
+# # plt.title(f'Without Decay')
+# # plt.axis(xmin=0,xmax=100)
+# # plt.xlabel("Steps Taken to Reach Goal", fontsize=20)
+# # plt.ylabel("Success Count", fontsize=20)
+# plt.title(f'{title} - Evaluation', fontsize=24)
+# # plt.figtext(0.5, 0.03, txt, wrap=True, horizontalalignment='center', fontsize=20)
+# # # plt.savefig('./Graphs/sarsa-4-evaluation-rbed.png')
+# # plt.figure()
 
-# bar plot
-title = "4x4 SARSA without Epsilon Decay"
-counts, edges, bars = plt.hist(steps_goal, color = 'r', rwidth=0.7)
-plt.bar_label(bars)
-plt.title(f'Without Decay')
-plt.axis(xmin=0,xmax=100)
-plt.xlabel("Steps Taken to Reach Goal", fontsize=20)
-plt.ylabel("Success Count", fontsize=20)
-plt.title(f'{title} - Evaluation', fontsize=24)
-plt.figtext(0.5, 0.03, txt, wrap=True, horizontalalignment='center', fontsize=20)
-# plt.savefig('./Graphs/sarsa-4-evaluation-rbed.png')
-plt.figure()
+# # # Training Plot
+# # plt.plot(*zip(*steps_needed))
+# plt.xlabel("Number of Episodes", fontsize=20)
+# plt.ylabel("Cumulative Rewards", fontsize=20)
+# # plt.title(f'{title} - Training')
+# # t = f'Training Success Rate: {len(steps_needed)/n_episodes}'
+# # text = f'Number of times reached goal during training {n_episodes} episodes: {len(steps_needed)}\n {t}'
+# # plt.figtext(0.5, 0.03, text, wrap=True, horizontalalignment='center', fontsize=20)
 
-# Training Plot
-plt.plot(*zip(*steps_needed))
-plt.xlabel("Number of Episodes", fontsize=20)
-plt.ylabel("Number of Steps needed to reach Goal", fontsize=20)
-plt.title(f'{title} - Training')
-t = f'Training Success Rate: {len(steps_needed)/n_episodes}'
-text = f'Number of times reached goal during training {n_episodes} episodes: {len(steps_needed)}\n {t}'
-plt.figtext(0.5, 0.03, text, wrap=True, horizontalalignment='center', fontsize=20)
-
-# plt.xticks(fontsize=20)
-# plt.yticks(fontsize=20)
-# plt.savefig('./Graphs/sarsa-4-training-rbed.png')
+# # plt.xticks(fontsize=20)
+# # plt.yticks(fontsize=20)
+# # plt.savefig('./Graphs/sarsa-4-rewards-rbed.png')
 plt.show()

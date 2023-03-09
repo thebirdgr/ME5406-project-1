@@ -6,8 +6,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 from collections import defaultdict # initiatlize:
 from tqdm import tqdm
+import csv
 
-env = gym.make('FrozenLake-v1')
+# f = open('./csv/ql-4-rewards-rbed.csv', 'w')
+# writer = csv.writer(f)
+
+env = gym.make('FrozenLake-v1', render_mode="rgb_array")
+env.reset()
 env.render()
 
 # check to see if you can tune these values and how to tune them
@@ -79,7 +84,9 @@ REWARD_INCREMENT = 0.1
 REWARD_THRESHOLD = 0
 EPSILON_DELTA = (epsilon - MINIMUM_EPSILON)/STEPS_TO_TAKE
 
-    
+rewards_list = []
+tr = 0 
+
 for i_episode in tqdm(range(n_episodes)):
         
         # alpha = init_alpha + decayX*i_episode
@@ -89,13 +96,14 @@ for i_episode in tqdm(range(n_episodes)):
         # if alpha < 0:
             # alpha = 0
         state = env.reset()
+        state = state[0]
         count = 0
         total_reward = 0
         while(True):
             # choose A from S using policy derived from Q
             action =  choose_action_q_learning(Q, state, epsilon)
             # take action A, observe reward and next state
-            next_state, reward, end, probability = env.step(action)
+            next_state, reward, end, trunc, info = env.step(action)
             count += 1 # steps
             if(env.desc[next_state//size][next_state%size] == b"G"):
                 # if(n_episodes>750000):
@@ -105,7 +113,7 @@ for i_episode in tqdm(range(n_episodes)):
             elif(env.desc[next_state//size][next_state%size] == b"H"): # need to add the holes
                 reward = -1
             else:
-                reward = 0 
+                reward = 0
             total_reward += reward
             next_state_max_action = env.action_space.sample()
             for a in range(env.action_space.n):
@@ -121,6 +129,10 @@ for i_episode in tqdm(range(n_episodes)):
                     # print("goal")
                 else:
                     steps_per_episode.append((i_episode, count))
+                tr += total_reward
+                rewards_list.append(tr)
+                # writer.writerow([i_episode, tr])
+                # print(total_reward)
                 break
             state = next_state
         # epsilon = epsilon + decayX
@@ -136,6 +148,7 @@ steps_goal = []
 steps_end = []
 for i in range(1000):
         state = env.reset()
+        state = state[0]
         steps = 0
         size = int(math.sqrt(env.observation_space.n))
         done = False
@@ -145,7 +158,7 @@ for i in range(1000):
                 if Q[(state, max_action)]["a"] < Q[(state, action)]["a"]:
                     max_action = action
 
-            next_state, reward, done, info = env.step(max_action)
+            next_state, reward, done, trunc, info = env.step(max_action)
             steps += 1
             if(env.desc[next_state//size][next_state%size] == b"G"):
                 # print(len(steps_per_episode_goal))
@@ -171,30 +184,31 @@ for i in range(1000):
 # Plotting
 txt = f'Evaluation Success Rate: {len(steps_goal)/(len(steps_end)+len(steps_goal))}'
 plt.rcParams["figure.figsize"] = (30,20)
+print(txt)
+# plt.plot(rewards_list)
+# # bar plot
+# title = "4x4 Q-Learnings without Epsilon Decay"
+# # counts, edges, bars = plt.hist(steps_goal, color = 'r', rwidth=0.7)
+# # plt.bar_label(bars)
+# # plt.title(f'Without Decay')
+# # plt.axis(xmin=0,xmax=100)
+# # plt.xlabel("Steps Taken to Reach Goal", fontsize=20)
+# # plt.ylabel("Success Count", fontsize=20)
+# plt.title(f'{title} - Evaluation', fontsize=24)
+# # plt.figtext(0.5, 0.03, txt, wrap=True, horizontalalignment='center', fontsize=20)
+# # # plt.savefig('./Graphs/ql-4-evaluation.png')
+# # plt.figure()
 
-# bar plot
-title = "4x4 Q-Learnings without Epsilon Decay"
-counts, edges, bars = plt.hist(steps_goal, color = 'r', rwidth=0.7)
-plt.bar_label(bars)
-plt.title(f'Without Decay')
-plt.axis(xmin=0,xmax=100)
-plt.xlabel("Steps Taken to Reach Goal", fontsize=20)
-plt.ylabel("Success Count", fontsize=20)
-plt.title(f'{title} - Evaluation', fontsize=24)
-plt.figtext(0.5, 0.03, txt, wrap=True, horizontalalignment='center', fontsize=20)
-# plt.savefig('./Graphs/ql-4-evaluation.png')
-plt.figure()
+# # # Training Plot
+# # plt.plot(*zip(*steps_needed))
+# plt.xlabel("Number of Episodes", fontsize=20)
+# plt.ylabel("Cumulative Rewards", fontsize=20)
+# # plt.title(f'{title} - Training')
+# # t = f'Training Success Rate: {len(steps_needed)/n_episodes}'
+# # text = f'Number of times reached goal during training {n_episodes} episodes: {len(steps_needed)}\n {t}'
+# # plt.figtext(0.5, 0.03, text, wrap=True, horizontalalignment='center', fontsize=20)
 
-# Training Plot
-plt.plot(*zip(*steps_needed))
-plt.xlabel("Number of Episodes", fontsize=20)
-plt.ylabel("Number of Steps needed to reach Goal", fontsize=20)
-plt.title(f'{title} - Training')
-t = f'Training Success Rate: {len(steps_needed)/n_episodes}'
-text = f'Number of times reached goal during training {n_episodes} episodes: {len(steps_needed)}\n {t}'
-plt.figtext(0.5, 0.03, text, wrap=True, horizontalalignment='center', fontsize=20)
-
-# plt.xticks(fontsize=20)
-# plt.yticks(fontsize=20)
-# plt.savefig('./Graphs/ql-4-training.png')
-plt.show()
+# # plt.xticks(fontsize=20)
+# # plt.yticks(fontsize=20)
+# # plt.savefig('./Graphs/ql-4-rewards.png')
+# plt.show()
