@@ -25,7 +25,7 @@ state_action_returns = defaultdict(lambda: 0)
 state_action_count = defaultdict(lambda: 0) # since later we need the average, we need to make sure that we know how many times the state was visited, so as not to overbias with it's high values
 Q = defaultdict(lambda: np.zeros(env.action_space.n))
 
-n_episodes = 100
+n_episodes = 100000
 
  # Reward schedule:
  #    - Reach goal(G): +1
@@ -83,3 +83,34 @@ for i_episode in range(n_episodes):
                 
 pp.pprint(Q)
 pp.pprint(policy)
+
+steps_goal = []
+steps_end = []
+ratio = []
+
+for i in range(1000):
+    state = env.reset()
+    steps = 0
+    size = int(math.sqrt(env.observation_space.n))
+    done = False
+    while not done:
+        action = policy[state]
+
+        next_state, reward, done, info = env.step(action)
+        
+        steps += 1
+        if(env.desc[next_state//size][next_state%size] == b"G"):
+            # print(len(steps_per_episode_goal))
+            # print("Steps to reach goal: ", steps)
+            steps_goal.append(steps)
+            reward = 1
+        elif(env.desc[next_state//size][next_state%size] == b"H"): # need to add the holes
+            # print("Steps to reach hsoles: ", steps)
+            steps_end.append(steps)
+            reward = -1
+        else:
+            reward = 0
+        state = next_state
+    ratio.append(len(steps_goal)/len(steps_end))        
+    
+print(f'Ratio: {np.average(ratio)} ')
