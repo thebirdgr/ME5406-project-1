@@ -112,7 +112,7 @@ for i_episode in tqdm(range(n_episodes)):
         state = next_state
     # ---------------- Uncomment This for Epsilon decay ----------------    
     
-    # epsilon = epsilon + decayX
+    epsilon = epsilon + decayX
 
     # ---------------- Uncomment This for Reward Based Epsilon Decay----------------    
 
@@ -169,7 +169,7 @@ for i in range(1000):
 txt = f'Evaluation Success Rate: {len(steps_goal)/(len(steps_end)+len(steps_goal))}'
 plt.rcParams["figure.figsize"] = (30,20)
 print(txt)
-
+plt.plot(rewards_list)
 # bar plot
 title = "4x4 MCWES with RBED"
 # counts, edges, bars = plt.hist(steps_goal, color = 'r', rwidth=0.7)
@@ -184,7 +184,7 @@ title = "4x4 MCWES with RBED"
 # plt.figure()
 
 # Training Plot
-plt.plot(*zip(*steps_needed))
+# plt.plot(*zip(*steps_needed))
 # plt.plot(rewards_list)
 plt.xlabel("Number of Episodes", fontsize=20)
 plt.ylabel("Cumulative Rewards and Steps Needed", fontsize=20)

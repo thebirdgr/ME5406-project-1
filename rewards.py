@@ -65,5 +65,5 @@ title = "10x10 Cumulative Rewards Comparison With Decay"
 plt.title(title, fontsize = 30)
 plt.xlabel("Number of Episodes", fontsize = 20)
 plt.ylabel("Cumulative Rewards", fontsize = 20)
-plt.savefig("./Graphs/10-decay-convergence.png")
+# plt.savefig("./Graphs/4-rbed-convergence.png")
 plt.show()
