@@ -12,8 +12,8 @@ import csv
 # f = open('./csv/sarsa-4-rewards-rbed.csv', 'w')
 # writer = csv.writer(f)
 
-env = gym.make('FrozenLake-v1')
-env.reset()
+env = gym.make('FrozenLake-v0')
+# env.reset()
 env.render()
 
 # check to see if you can tune these values and how to tune them
@@ -59,7 +59,7 @@ REWARD_INCREMENT = 0.1
 REWARD_THRESHOLD = 0
 EPSILON_DELTA = (epsilon - MINIMUM_EPSILON)/STEPS_TO_TAKE
 state =  env.reset()
-state = state[0]
+# state = state[0]
 action = choose_action_sarsa(Q, state, epsilon)
 steps_needed = []
 
@@ -68,12 +68,12 @@ tr = 0
 
 for i_episode in tqdm(range(n_episodes)):
     state =  env.reset()
-    state = state[0]
+    # state = state[0]
     total_reward = 0
     count = 0
     while(True):
         # take action, observe reward and next stateS
-        next_state, reward, end, trunc, info = env.step(action)
+        next_state, reward, end, info = env.step(action)
         # choose the action for the next state as well using the policy from Q
         next_state_action = choose_action_sarsa(Q, next_state, epsilon)
         
@@ -114,7 +114,7 @@ steps_goal = []
 steps_end = []
 for i in range(1000):
         state = env.reset()
-        state = state[0]
+        # state = state[0]
         steps = 0
         size = int(math.sqrt(env.observation_space.n))
         done = False
@@ -124,7 +124,7 @@ for i in range(1000):
                 if Q[(state, max_action)]["a"] < Q[(state, action)]["a"]:
                     max_action = action
 
-            next_state, reward, done, trunc, info = env.step(max_action)
+            next_state, reward, done, info = env.step(max_action)
             steps += 1
             if(env.desc[next_state//size][next_state%size] == b"G"):
                 # print(len(steps_per_episode_goal))

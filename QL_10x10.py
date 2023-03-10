@@ -8,11 +8,11 @@ from collections import defaultdict # initiatlize:
 from tqdm import tqdm
 from helper import *
 import csv
-f = open('./csv/ql-10-rewards-decay.csv', 'w')
-writer = csv.writer(f)
+# f = open('./csv/ql-10-rewards-decay.csv', 'w')
+# writer = csv.writer(f)
 
-env = gym.make('FrozenLake-v1', desc=generate_random_map(size=10, p = 0.75))
-env.reset()
+env = gym.make('FrozenLake-v0', desc=generate_random_map(size=10, p = 0.75))
+# env.reset()
 env.render()
 
 # check to see if you can tune these values and how to tune them
@@ -54,8 +54,8 @@ size = int(math.sqrt(env.observation_space.n))
 steps_needed = []
 
 Q = defaultdict(lambda: {"a": 0, "c": 0}) # action value and the count
-decayX = -0.000001
-n_episodes = 1000000 # 10000 doesn't work
+decayX = -0.00001
+n_episodes = 100000 # 10000 doesn't work
 epsilon = 1.0
 MINIMUM_EPSILON = 0.0
 REWARD_TARGET = 50 # reach goal in 50 steps
@@ -76,14 +76,14 @@ for i_episode in tqdm(range(n_episodes)):
         # if alpha < 0:
             # alpha = 0
         state = env.reset()
-        state = state[0]
+        # state = state[0]
         count = 0
         total_reward = 0
         while(True):
             # choose A from S using policy derived from Q
             action =  choose_action_q_learning(Q, state, epsilon)
             # take action A, observe reward and next state
-            next_state, reward, end, trunc, info = env.step(action)
+            next_state, reward, end, info = env.step(action)
             count += 1 # steps
             if(env.desc[next_state//size][next_state%size] == b"G"):
                 # if(n_episodes>750000):
@@ -128,7 +128,7 @@ steps_goal = []
 steps_end = []
 for i in range(1000):
         state = env.reset()
-        state = state[0]
+        # state = state[0]
         steps = 0
         size = int(math.sqrt(env.observation_space.n))
         done = False
@@ -138,7 +138,7 @@ for i in range(1000):
                 if Q[(state, max_action)]["a"] < Q[(state, action)]["a"]:
                     max_action = action
 
-            next_state, reward, done, trunc, info = env.step(max_action)
+            next_state, reward, done, info = env.step(max_action)
             steps += 1
             if(env.desc[next_state//size][next_state%size] == b"G"):
                 # print(len(steps_per_episode_goal))

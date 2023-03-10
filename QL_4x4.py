@@ -11,7 +11,7 @@ import csv
 # f = open('./csv/ql-4-rewards-rbed.csv', 'w')
 # writer = csv.writer(f)
 
-env = gym.make('FrozenLake-v1', render_mode="rgb_array")
+env = gym.make('FrozenLake-v0')
 env.reset()
 env.render()
 
@@ -96,14 +96,14 @@ for i_episode in tqdm(range(n_episodes)):
         # if alpha < 0:
             # alpha = 0
         state = env.reset()
-        state = state[0]
+        # state = state[0]
         count = 0
         total_reward = 0
         while(True):
             # choose A from S using policy derived from Q
             action =  choose_action_q_learning(Q, state, epsilon)
             # take action A, observe reward and next state
-            next_state, reward, end, trunc, info = env.step(action)
+            next_state, reward, end, info = env.step(action)
             count += 1 # steps
             if(env.desc[next_state//size][next_state%size] == b"G"):
                 # if(n_episodes>750000):
@@ -148,7 +148,7 @@ steps_goal = []
 steps_end = []
 for i in range(1000):
         state = env.reset()
-        state = state[0]
+        # state = state[0]
         steps = 0
         size = int(math.sqrt(env.observation_space.n))
         done = False
@@ -158,7 +158,7 @@ for i in range(1000):
                 if Q[(state, max_action)]["a"] < Q[(state, action)]["a"]:
                     max_action = action
 
-            next_state, reward, done, trunc, info = env.step(max_action)
+            next_state, reward, done, info = env.step(max_action)
             steps += 1
             if(env.desc[next_state//size][next_state%size] == b"G"):
                 # print(len(steps_per_episode_goal))

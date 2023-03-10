@@ -15,10 +15,10 @@ import csv
 # f = open('./csv/es-4-rewards-rbed.csv', 'w')
 # writer = csv.writer(f)
 
-env = gym.make('FrozenLake-v1')
+env = gym.make('FrozenLake-v0')
 # , desc=generate_random_map(size=10, p = 0.75)
 pp = pprint.PrettyPrinter(indent=4)
-env.reset()
+# env.reset()
 env.render()
 
 # policy
@@ -77,7 +77,7 @@ rewards_list = []
 tr = 0
 for i_episode in tqdm(range(n_episodes)):
     state =  env.reset()
-    state = state[0]
+    # state = state[0]
     start = True # for the starting taking a randoming action, to give us exploring starts, this so that whatever direction it takes, it can reach the goal
     state_action_returns_episode = [] # to track the Q(s,a) in each episode
     states_in_episode = [] # to track S in each episode
@@ -89,7 +89,7 @@ for i_episode in tqdm(range(n_episodes)):
         # 3
         action = choose_action_es(policy, state, epsilon)
 
-        next_state, reward, end, trunc, info = env.step(action)
+        next_state, reward, end, info = env.step(action)
         count += 1
         if(env.desc[next_state//size][next_state%size] == b"G"):
             reward = 1
@@ -127,14 +127,14 @@ steps_end = []
 ratio = []
 for i in range(1000):
     state = env.reset()
-    state = state[0]
+    # state = state[0]
     steps = 0
     size = int(math.sqrt(env.observation_space.n))
     done = False
     while not done:
         action = policy[state]
 
-        next_state, reward, done, trunc, info = env.step(action)
+        next_state, reward, done, info = env.step(action)
         
         steps += 1
         if(env.desc[next_state//size][next_state%size] == b"G"):
