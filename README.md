@@ -36,6 +36,16 @@ This is to ensure that this repo met the requirements of the project: to run on 
 
 # Linux
 
+Install the necessay package.
+
+`sudo apt-get install patchelf`
+
+Download the mujuco library from [this website](https://www.roboti.us/download.html). Download **mjpro150 linux**.
+
+Extract **mjpro150 linux**, and move the contents to `~/.mujoco/`
+
+Download the activation key from [here](https://www.roboti.us/license.html). Move the activation key file `mjkey.txt` to `~/.mujoco/`.
+
 1. Clone this Repository. Or Unzip the folder containing this repository. And open a terminal inside the folder. 
 
 2. `conda env create -f environment_ubuntu.yml`
