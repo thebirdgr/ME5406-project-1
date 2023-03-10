@@ -11,7 +11,7 @@ import csv
 # f = open('./csv/ql-4-rewards-rbed.csv', 'w')
 # writer = csv.writer(f)
 
-env = gym.make('FrozenLake-v0')
+env = gym.make('FrozenLake-v1')
 env.reset()
 env.render()
 
@@ -23,23 +23,12 @@ discount_rate = 0.9
 Q_list = []
 # Q = defaultdict(lambda: np.zeros(env.action_space.n))
 # print(env.observation_space.n)
+# table to store optimal policy action
 policy = defaultdict(lambda: 0)
+
 state = defaultdict(lambda: 0)
 
-# def choose_action_q_learning(Q, state, decay):
-    
-#     min_action = env.action_space.sample() # initiate arbitary action
-#     max_action = env.action_space.sample()
-#     for action in range(env.action_space.n):
-#         if Q[(state, max_action)]["a"] < Q[(state, action)]["a"]:
-#             max_action = action
-#         # if Q[(state, min_action)]["c"] < Q[(state, action)]["c"]:
-#         #     min_action = action
-#     if np.random.random() < decay:
-#         return min_action # lesser explored
-#     else:
-#         return max_action # exploitation
-
+# epsilon soft-max greedy policy    
 def choose_action_q_learning(Q, state, decay):
     no_actions = env.action_space.n
     es1 = 1 - decay + (decay / no_actions)
@@ -59,8 +48,6 @@ def choose_action_q_learning(Q, state, decay):
         else:
             return max_action
 
-# n_episodes = 100000
-# , desc=generate_random_map(size=10, p = 0.75)
 max_steps = 200
 
 steps_per_episode = []
@@ -69,13 +56,13 @@ size = int(math.sqrt(env.observation_space.n))
 
 steps_needed = []
 
-# for n_episodes in tqdm(range(0, 1000000, 250000)):
-    
-    # Q = defaultdict(lambda: np.zeros(env.action_space.n))
-    # Q = defaultdict(lambda: 0)
+# Q_table to store (state, action) pair
 Q = defaultdict(lambda: {"a": 0, "c": 0}) # action value and the count
-decayX = -0.0005 
+# epsilon decay
+decayX = -0.0001
+# number of episodes trained for.
 n_episodes = 10000
+#information needed for Reward Based Epsilon Decay
 epsilon = 1.0
 MINIMUM_EPSILON = 0.0
 REWARD_TARGET = 7 # reach goal in 50 steps
@@ -84,17 +71,12 @@ REWARD_INCREMENT = 0.1
 REWARD_THRESHOLD = 0
 EPSILON_DELTA = (epsilon - MINIMUM_EPSILON)/STEPS_TO_TAKE
 
-rewards_list = []
-tr = 0 
+steps_needed = [] # steps needed to reach the goal per episode
+rewards_list = [] # list of cumulative rewards
+tr = 0 # total reward
 
 for i_episode in tqdm(range(n_episodes)):
         
-        # alpha = init_alpha + decayX*i_episode
-        
-        # if i_episode / 100000 > 5:
-        #     epsilon = 0
-        # if alpha < 0:
-            # alpha = 0
         state = env.reset()
         # state = state[0]
         count = 0
@@ -105,6 +87,10 @@ for i_episode in tqdm(range(n_episodes)):
             # take action A, observe reward and next state
             next_state, reward, end, info = env.step(action)
             count += 1 # steps
+            # Reward schedule:
+            #    - Reach goal(G): +1
+            #    - Reach hole(H): -1
+            #    - Reach frozen(F): 0
             if(env.desc[next_state//size][next_state%size] == b"G"):
                 # if(n_episodes>750000):
                 steps_needed.append((i_episode, count))
@@ -135,15 +121,21 @@ for i_episode in tqdm(range(n_episodes)):
                 # print(total_reward)
                 break
             state = next_state
-        # epsilon = epsilon + decayX
-        # if(i_episode % 100000 == 0):
-        #         print("Per episode", i_episode)
+
+        # ---------------- Uncomment This for Epsilon decay ----------------    
+    
+        epsilon = epsilon + decayX
+
+        # ---------------- Uncomment This for Reward Based Epsilon Decay----------------    
+
         # if epsilon > MINIMUM_EPSILON and reward >= REWARD_THRESHOLD:    
-        #         epsilon = epsilon - EPSILON_DELTA    # lower the epsilon
-        #         REWARD_THRESHOLD = REWARD_THRESHOLD + REWARD_INCREMENT
-    # print(n_episodes)             
+        #             epsilon = epsilon - EPSILON_DELTA    # lower the epsilon
+        #             REWARD_THRESHOLD = REWARD_THRESHOLD + REWARD_INCREMENT
+    
+
     # Q_list.append(Q) # get the policies for comparison
         
+# Evaluation
 steps_goal = []
 steps_end = []
 for i in range(1000):
@@ -187,28 +179,28 @@ plt.rcParams["figure.figsize"] = (30,20)
 print(txt)
 # plt.plot(rewards_list)
 # # bar plot
-# title = "4x4 Q-Learnings without Epsilon Decay"
-# # counts, edges, bars = plt.hist(steps_goal, color = 'r', rwidth=0.7)
-# # plt.bar_label(bars)
-# # plt.title(f'Without Decay')
-# # plt.axis(xmin=0,xmax=100)
-# # plt.xlabel("Steps Taken to Reach Goal", fontsize=20)
-# # plt.ylabel("Success Count", fontsize=20)
+title = "4x4 Q-Learnings with Epsilon Decay"
+# counts, edges, bars = plt.hist(steps_goal, color = 'r', rwidth=0.7)
+# plt.bar_label(bars)
+# plt.title(f'Without Decay')
+# plt.axis(xmin=0,xmax=100)
+# plt.xlabel("Steps Taken to Reach Goal", fontsize=20)
+# plt.ylabel("Success Count", fontsize=20)
 # plt.title(f'{title} - Evaluation', fontsize=24)
-# # plt.figtext(0.5, 0.03, txt, wrap=True, horizontalalignment='center', fontsize=20)
-# # # plt.savefig('./Graphs/ql-4-evaluation.png')
+# plt.figtext(0.5, 0.03, txt, wrap=True, horizontalalignment='center', fontsize=20)
+# plt.savefig('./Graphs/ql-4-evaluation-decay.png')
 # # plt.figure()
 
-# # # Training Plot
-# # plt.plot(*zip(*steps_needed))
-# plt.xlabel("Number of Episodes", fontsize=20)
-# plt.ylabel("Cumulative Rewards", fontsize=20)
-# # plt.title(f'{title} - Training')
-# # t = f'Training Success Rate: {len(steps_needed)/n_episodes}'
-# # text = f'Number of times reached goal during training {n_episodes} episodes: {len(steps_needed)}\n {t}'
-# # plt.figtext(0.5, 0.03, text, wrap=True, horizontalalignment='center', fontsize=20)
+# # Training Plot
+plt.plot(*zip(*steps_needed))
+plt.xlabel("Number of Episodes", fontsize=20)
+plt.ylabel("Cumulative Rewards", fontsize=20)
+plt.title(f'{title} - Training')
+t = f'Training Success Rate: {len(steps_needed)/n_episodes}'
+text = f'Number of times reached goal during training {n_episodes} episodes: {len(steps_needed)}\n {t}'
+plt.figtext(0.5, 0.03, text, wrap=True, horizontalalignment='center', fontsize=20)
 
 # # plt.xticks(fontsize=20)
 # # plt.yticks(fontsize=20)
-# # plt.savefig('./Graphs/ql-4-rewards.png')
-# plt.show()
+plt.savefig('./Graphs/ql-4-training-decay.png')
+plt.show()

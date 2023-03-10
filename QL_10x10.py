@@ -8,6 +8,7 @@ from collections import defaultdict # initiatlize:
 from tqdm import tqdm
 from helper import *
 import csv
+
 # f = open('./csv/ql-10-rewards-decay.csv', 'w')
 # writer = csv.writer(f)
 
@@ -17,15 +18,14 @@ env.render()
 
 # check to see if you can tune these values and how to tune them
 alpha = 0.1
-# epsilon = 0.8
+
 discount_rate = 0.9
 
 Q_list = []
-# Q = defaultdict(lambda: np.zeros(env.action_space.n))
-# print(env.observation_space.n)
 policy = defaultdict(lambda: 0)
 state = defaultdict(lambda: 0)
 
+# epsilon soft-max greedy policy    
 def choose_action_q_learning(Q, state, decay):
     no_actions = env.action_space.n
     es1 = 1 - decay + (decay / no_actions)
@@ -51,12 +51,14 @@ steps_per_episode = []
 steps_per_episode_goal = []
 size = int(math.sqrt(env.observation_space.n))
 
-steps_needed = []
 
+# Q_table to store (state, action) pair
 Q = defaultdict(lambda: {"a": 0, "c": 0}) # action value and the count
 decayX = -0.00001
 n_episodes = 100000 # 10000 doesn't work
 epsilon = 1.0
+
+#information needed for Reward Based Epsilon Decay
 MINIMUM_EPSILON = 0.0
 REWARD_TARGET = 50 # reach goal in 50 steps
 STEPS_TO_TAKE = REWARD_TARGET
@@ -64,17 +66,12 @@ REWARD_INCREMENT = 0.1
 REWARD_THRESHOLD = 0
 EPSILON_DELTA = (epsilon - MINIMUM_EPSILON)/STEPS_TO_TAKE
 
-rewards_list = []
-tr = 0     
+steps_needed = [] # steps needed to reach the goal per episode
+rewards_list = [] # list of cumulative rewards
+tr = 0 # total reward 
 
+# Training
 for i_episode in tqdm(range(n_episodes)):
-        
-        # alpha = init_alpha + decayX*i_episode
-        
-        # if i_episode / 100000 > 5:
-        #     epsilon = 0
-        # if alpha < 0:
-            # alpha = 0
         state = env.reset()
         # state = state[0]
         count = 0
@@ -85,6 +82,10 @@ for i_episode in tqdm(range(n_episodes)):
             # take action A, observe reward and next state
             next_state, reward, end, info = env.step(action)
             count += 1 # steps
+            # Reward schedule:
+            #    - Reach goal(G): +1
+            #    - Reach hole(H): -1
+            #    - Reach frozen(F): 0
             if(env.desc[next_state//size][next_state%size] == b"G"):
                 # if(n_episodes>750000):
                 steps_needed.append((i_episode, count))
@@ -115,15 +116,18 @@ for i_episode in tqdm(range(n_episodes)):
                 # print(total_reward)
                 break
             state = next_state
+        # ---------------- Uncomment This for Epsilon decay ----------------    
+    
         # epsilon = epsilon + decayX
-        # if(i_episode % 100000 == 0):
-        #         print("Per episode", i_episode)
+
+        # ---------------- Uncomment This for Reward Based Epsilon Decay----------------    
+
         # if epsilon > MINIMUM_EPSILON and reward >= REWARD_THRESHOLD:    
-        #         epsilon = epsilon - EPSILON_DELTA    # lower the epsilon
-        #         REWARD_THRESHOLD = REWARD_THRESHOLD + REWARD_INCREMENT
-    # print(n_episodes)             
-    # Q_list.append(Q) # get the policies for comparison
-        
+        #             epsilon = epsilon - EPSILON_DELTA    # lower the epsilon
+        #             REWARD_THRESHOLD = REWARD_THRESHOLD + REWARD_INCREMENT
+
+
+# Evaluation
 steps_goal = []
 steps_end = []
 for i in range(1000):
@@ -152,19 +156,15 @@ for i in range(1000):
             else:
                 reward = 0
             state = next_state
+        # ratio.append(len(steps_goal)/(len(steps_goal) + len(steps_end)))       
 
 
-        # end_list.append(steps)
-        # print("Steps to reach goal: ", steps)
-    # print(len(end_list))
-    # y = [np.polyval(curve, p) for p in end_list]
-    # axis[r//subplot_size, r%subplot_size].hist(steps_end, color = 'g', orientation='horizontal')
 
 # Plotting
 txt = f'Evaluation Success Rate: {len(steps_goal)/(len(steps_end)+len(steps_goal))}'
 plt.rcParams["figure.figsize"] = (30,20)
 print(txt)
-plt.plot(rewards_list)
+# plt.plot(rewards_list)
 # bar plot
 title = "10x10 Q-Learnings without Epsilon Decay"
 # counts, edges, bars = plt.hist(steps_goal, color = 'r', rwidth=0.7)
@@ -172,19 +172,19 @@ title = "10x10 Q-Learnings without Epsilon Decay"
 # plt.axis(xmin=0,xmax=100)
 # plt.xlabel("Steps Taken to Reach Goal", fontsize=20)
 # plt.ylabel("Success Count", fontsize=20)
-plt.title(f'{title} - Evaluation', fontsize=24)
+# plt.title(f'{title} - Evaluation', fontsize=24)
 # plt.figtext(0.5, 0.03, txt, wrap=True, horizontalalignment='center', fontsize=20)
 # # plt.savefig('./Graphs/ql-10-evaluation.png')
 # plt.figure()
 
 # Training Plot
-# plt.plot(*zip(*steps_needed))
+plt.plot(*zip(*steps_needed))
 plt.xlabel("Number of Episodes", fontsize=20)
 plt.ylabel("Cumulative Rewards", fontsize=20)
-# plt.title(f'{title} - Training')
-# t = f'Training Success Rate: {len(steps_needed)/n_episodes}'
-# text = f'Number of times reached goal during training {n_episodes} episodes: {len(steps_needed)}\n {t}'
-# plt.figtext(0.5, 0.03, text, wrap=True, horizontalalignment='center', fontsize=20)
+plt.title(f'{title} - Training')
+t = f'Training Success Rate: {len(steps_needed)/n_episodes}'
+text = f'Number of times reached goal during training {n_episodes} episodes: {len(steps_needed)}\n {t}'
+plt.figtext(0.5, 0.03, text, wrap=True, horizontalalignment='center', fontsize=20)
 
 # plt.xticks(fontsize=20)
 # plt.yticks(fontsize=20)

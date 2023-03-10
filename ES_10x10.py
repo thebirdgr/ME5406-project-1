@@ -22,30 +22,40 @@ pp = pprint.PrettyPrinter(indent=10)
 
 # policy
 policy = defaultdict(lambda: randint(0,3)) # initialize random actions to the start initital policy, lambda: 0
-state_action_returns = defaultdict(lambda: 0)
+# information to evaluate metrics
+state_action_returns = defaultdict(lambda: [])
 state_action_count = defaultdict(lambda: 0) # since later we need the average, we need to make sure that we know how many times the state was visited, so as not to overbias with it's high values
-Q = defaultdict(lambda: np.zeros(env.action_space.n))
+# Q_table to store (state, action) pair
+Q = defaultdict(lambda: 0)
 size = int(math.sqrt(env.observation_space.n))
+# number of episodes trained for.
 n_episodes = 100000
 
- # Reward schedule:
- #    - Reach goal(G): +1
- #    - Reach hole(H): -1
- #    - Reach frozen(F): 0
 
+# epsilon soft-max greedy policy    
 def choose_action_es(policy, state, decay):
-    
-    if np.random.random() < decay:
-        return env.action_space.sample() # lesser explored
+    no_actions = env.action_space.n
+    # these are probabilities
+    es1 = 1 - decay + (decay / no_actions)
+    es2 = decay / no_actions
+    if es1 > es2:
+        if np.random.random() < es2:
+            return env.action_space.sample()
+        else:
+            return policy[state]
     else:
-        return policy[state] # exploitation
+        if np.random.random() < es1:
+            return env.action_space.sample()
+        else:
+            return policy[state]
 
+# epsilon decay
 decayX = -0.00001
-
-# init_epsilon = 1
-
 timesgoal = 0
+# discount rate
+gamma = 0.9
 
+#information needed for Reward Based Epsilon Decay
 epsilon = 1.0
 MINIMUM_EPSILON = 0.0
 REWARD_TARGET = 50 # reach goal in 7 steps
@@ -54,33 +64,31 @@ REWARD_INCREMENT = 0.1
 REWARD_THRESHOLD = 0
 EPSILON_DELTA = (epsilon - MINIMUM_EPSILON)/STEPS_TO_TAKE
 
-steps_needed = []
+steps_needed = [] # steps needed to reach the goal per episode
+rewards_list = [] # list of cumulative rewards
+tr = 0 # total reward
 
-rewards_list = []
-tr = 0   
-
+# Training
 for i_episode in tqdm(range(n_episodes)):
     state =  env.reset()
     # state = state[0]
     start = True # for the starting taking a randoming action, to give us exploring starts, this so that whatever direction it takes, it can reach the goal
     state_action_returns_episode = [] # to track the Q(s,a) in each episode
     states_in_episode = [] # to track S in each episode
+    episode = []
     count  = 0
     total_reward = 0
     while(True): # proceed until you reach you end goals
-        # 1
-        # if(start):
-        #     action = np.random.choice([0,1,2,3])
-        #     start=False
-        # else:
-        #     action = policy[curr_state]
-        # 2
-        
-        action = choose_action_es(policy, state, epsilon)
+        # action = env.action_space.sample()
         # 3
-        
+        action = choose_action_es(policy, state, epsilon)
+
         next_state, reward, end, info = env.step(action)
         count += 1
+        # Reward schedule:
+        #    - Reach goal(G): +1
+        #    - Reach hole(H): -1
+        #    - Reach frozen(F): 0
         if(env.desc[next_state//size][next_state%size] == b"G"):
             reward = 1
             steps_needed.append((i_episode, count))
@@ -89,46 +97,38 @@ for i_episode in tqdm(range(n_episodes)):
         else:
             reward = 0
         total_reward += reward
-        state_action_returns_episode.append(((state, action),reward)) # to match our state_action_returns
-        states_in_episode.append(state)
+        episode.append(((state, action),total_reward))
         if end:
-            if(i_episode > n_episodes - 5):
-                # print(reward)
-                print(timesgoal)
-                # print("reached end goal in: ", len(states_in_episode))
             tr += total_reward
             rewards_list.append(tr)
             # writer.writerow([i_episode, tr])
             break
         state = next_state
-    epsilon = epsilon + decayX
+    # ---------------- Uncomment This for Epsilon decay ----------------    
+    
+    # epsilon = epsilon + decayX
+
+    # ---------------- Uncomment This for Reward Based Epsilon Decay----------------    
+
     # if epsilon > MINIMUM_EPSILON and reward >= REWARD_THRESHOLD:    
     #             epsilon = epsilon - EPSILON_DELTA    # lower the epsilon
     #             REWARD_THRESHOLD = REWARD_THRESHOLD + REWARD_INCREMENT
+
+
     # update the state-action pair values 
-    for ((curr_state, action),reward) in state_action_returns_episode:
-        first_occurence_idx = next(i for i,(s_a,r) in enumerate(state_action_returns_episode) if s_a==(curr_state,action))
-        g = 0
-        for event in state_action_returns_episode:
-            # print(event)
-            g += event[1] # at the first round rewards will be 0 as the goal is not reached and it's still exploring
-        state_action_count[(curr_state, action)] += 1
-        # if(i_episode > n_episodes - 5):
-            # print(state_action_returns[(curr_state, action)])
-        # new_val = (current_val * N + reward) / N + 1
-        state_action_returns[(curr_state, action)] += (state_action_returns[(curr_state, action)] * state_action_count[(curr_state, action)] + g) / (state_action_count[(curr_state, action)] + 1)
-        Q[curr_state][action] = state_action_returns[(curr_state, action)]
-        
-    for curr_state in states_in_episode:
-        # get all the curr_state values
-        curr_state_action_pairs = [(s,a) for ((s,a),r) in state_action_returns_episode if s==curr_state]
-        maximum = 0
-        for pair in curr_state_action_pairs:
-            if Q[pair[0]][pair[1]] > maximum:
-                maximum = Q[pair[0]][pair[1]]
-                policy[curr_state] = pair[1]
+    g = 0
+    for ((curr_state, action),reward) in episode:
+        g = gamma*g + reward
+        state_action_returns[(curr_state, action)].append(g)
+        Q[(curr_state, action)] = np.average(state_action_returns[(curr_state, action)])
+        max_action = env.action_space.sample()
+        for action in range(env.action_space.n):
+            if Q[(state, max_action)] < Q[(state, action)]:
+                max_action = action
+        policy[curr_state] = max_action
                 
-# pp.pprint(steps_needed)
+
+# Evaluation
 steps_goal = []
 steps_end = []
 ratio = []
@@ -162,7 +162,7 @@ for i in range(1000):
 txt = f'Evaluation Success Rate: {len(steps_goal)/(len(steps_end)+len(steps_goal))}'
 plt.rcParams["figure.figsize"] = (30,20)
 print(txt)
-plt.plot(rewards_list)
+# plt.plot(rewards_list)
 
 # bar plot
 title = "10x10 ES without Epsilon Decay"
@@ -177,13 +177,13 @@ plt.title(f'{title} - Evaluation', fontsize=24)
 # plt.figure()
 
 # Training Plot
-# plt.plot(*zip(*steps_needed))
+plt.plot(*zip(*steps_needed))
 plt.xlabel("Number of Episodes", fontsize=20)
 plt.ylabel("Cumulative Rewards", fontsize=20)
-# plt.title(f'{title} - Training')
-# t = f'Training Success Rate: {len(steps_needed)/n_episodes}'
-# text = f'Number of times reached goal during training {n_episodes} episodes: {len(steps_needed)}\n {t}'
-# plt.figtext(0.5, 0.03, text, wrap=True, horizontalalignment='center', fontsize=20)
+plt.title(f'{title} - Training')
+t = f'Training Success Rate: {len(steps_needed)/n_episodes}'
+text = f'Number of times reached goal during training {n_episodes} episodes: {len(steps_needed)}\n {t}'
+plt.figtext(0.5, 0.03, text, wrap=True, horizontalalignment='center', fontsize=20)
 
 # plt.xticks(fontsize=20)
 # plt.yticks(fontsize=20)

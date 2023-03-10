@@ -22,25 +22,16 @@ pp = pprint.PrettyPrinter(indent=4)
 env.render()
 
 # policy
+# Q_table to store (state, action) pair
 Q = defaultdict(lambda: 0)
+# table to store optimal policy action
 policy = defaultdict(lambda: randint(0,3)) # initialize random actions to the start initital policy, lambda: 0
+# information to evaluate metrics
 state_action_returns = defaultdict(lambda: [])
 state_action_count = defaultdict(lambda: 0) # since later we need the average, we need to make sure that we know how many times the state was visited, so as not to overbias with it's high values
 size = int(math.sqrt(env.observation_space.n))
-n_episodes = 10000
 
- # Reward schedule:
- #    - Reach goal(G): +1
- #    - Reach hole(H): -1
- #    - Reach frozen(F): 0
-
-# def choose_action_es(policy, state, decay):
-    
-#     if np.random.random() < decay:
-#         return env.action_space.sample() # lesser explored
-#     else:
-#         return policy[state] # exploitation
-    
+# epsilon soft-max greedy policy    
 def choose_action_es(policy, state, decay):
     no_actions = env.action_space.n
     # these are probabilities
@@ -57,14 +48,20 @@ def choose_action_es(policy, state, decay):
         else:
             return policy[state]
 
+# number of episodes trained for.
+n_episodes = 10000
+# epsilon decay
 decayX = -0.0001
-
-# init_epsilon = 1
-
-timesgoal = 0
+# discount rate
 gamma = 0.9
 
+# number of times reached the goal in one epoch
+timesgoal = 0
+
+
 epsilon = 1.0
+
+#information needed for Reward Based Epsilon Decay
 MINIMUM_EPSILON = 0.0
 REWARD_TARGET = 7 # reach goal in 7 steps
 STEPS_TO_TAKE = REWARD_TARGET
@@ -72,9 +69,12 @@ REWARD_INCREMENT = 0.1
 REWARD_THRESHOLD = 0
 EPSILON_DELTA = (epsilon - MINIMUM_EPSILON)/STEPS_TO_TAKE
 
-steps_needed = []
-rewards_list = []
-tr = 0
+
+steps_needed = [] # steps needed to reach the goal per episode
+rewards_list = [] # list of cumulative rewards
+tr = 0 # total reward
+
+# training 
 for i_episode in tqdm(range(n_episodes)):
     state =  env.reset()
     # state = state[0]
@@ -91,6 +91,10 @@ for i_episode in tqdm(range(n_episodes)):
 
         next_state, reward, end, info = env.step(action)
         count += 1
+        # Reward schedule:
+        #    - Reach goal(G): +1
+        #    - Reach hole(H): -1
+        #    - Reach frozen(F): 0
         if(env.desc[next_state//size][next_state%size] == b"G"):
             reward = 1
             steps_needed.append((i_episode, count))
@@ -106,10 +110,17 @@ for i_episode in tqdm(range(n_episodes)):
             # writer.writerow([i_episode, tr])
             break
         state = next_state
+    # ---------------- Uncomment This for Epsilon decay ----------------    
+    
     # epsilon = epsilon + decayX
+
+    # ---------------- Uncomment This for Reward Based Epsilon Decay----------------    
+
     # if epsilon > MINIMUM_EPSILON and reward >= REWARD_THRESHOLD:    
     #             epsilon = epsilon - EPSILON_DELTA    # lower the epsilon
     #             REWARD_THRESHOLD = REWARD_THRESHOLD + REWARD_INCREMENT
+
+
     # update the state-action pair values 
     g = 0
     for ((curr_state, action),reward) in episode:
@@ -122,6 +133,8 @@ for i_episode in tqdm(range(n_episodes)):
                 max_action = action
         policy[curr_state] = max_action
 
+
+# Evaluation
 steps_goal = []
 steps_end = []
 ratio = []
@@ -151,11 +164,11 @@ for i in range(1000):
         state = next_state
     ratio.append(len(steps_goal)/(len(steps_goal) + len(steps_end)))       
 
+
 # Plotting
 txt = f'Evaluation Success Rate: {len(steps_goal)/(len(steps_end)+len(steps_goal))}'
 plt.rcParams["figure.figsize"] = (30,20)
 print(txt)
-plt.plot(rewards_list)
 
 # bar plot
 title = "4x4 MCWES with RBED"
@@ -165,22 +178,23 @@ title = "4x4 MCWES with RBED"
 # plt.axis(xmin=0,xmax=100)
 # plt.xlabel("", fontsize=20)
 # plt.ylabel("Success Count", fontsize=20)
-plt.title(f'{title} - Evaluation', fontsize=24)
+# plt.title(f'{title} - Evaluation', fontsize=24)
 # plt.figtext(0.5, 0.03, txt, wrap=True, horizontalalignment='center', fontsize=20)
 # # plt.savefig('./Graphs/es-4-evaluation-rbed.png')
 # plt.figure()
 
 # Training Plot
-# plt.plot(*zip(*steps_needed))
+plt.plot(*zip(*steps_needed))
+# plt.plot(rewards_list)
 plt.xlabel("Number of Episodes", fontsize=20)
-plt.ylabel("Cumulative Rewards", fontsize=20)
-# plt.title(f'{title} - Training')
-# t = f'Training Success Rate: {len(steps_needed)/n_episodes}'
-# text = f'Number of times reached goal during training {n_episodes} episodes: {len(steps_needed)}\n {t}'
-# plt.figtext(0.5, 0.03, text, wrap=True, horizontalalignment='center', fontsize=20)
+plt.ylabel("Cumulative Rewards and Steps Needed", fontsize=20)
+plt.title(f'{title} - Training')
+t = f'Training Success Rate: {len(steps_needed)/n_episodes}'
+text = f'Number of times reached goal during training {n_episodes} episodes: {len(steps_needed)}\n {t}'
+plt.figtext(0.5, 0.03, text, wrap=True, horizontalalignment='center', fontsize=20)
 
-# plt.xticks(fontsize=20)
-# plt.yticks(fontsize=20)
+plt.xticks(fontsize=20)
+plt.yticks(fontsize=20)
 # plt.savefig('./Graphs/es-4-rewards-rbed.png')
 plt.show()
     
