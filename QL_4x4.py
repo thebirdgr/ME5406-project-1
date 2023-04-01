@@ -11,7 +11,7 @@ import csv
 # f = open('./csv/ql-4-rewards-rbed.csv', 'w')
 # writer = csv.writer(f)
 
-env = gym.make('FrozenLake-v1')
+env = gym.make('FrozenLake-v0')
 env.reset()
 env.render()
 
