@@ -159,7 +159,11 @@ for i in range(1000):
     ratio.append(len(steps_goal)/len(steps_end))        
     
 # Plotting
-txt = f'Evaluation Success Rate: {len(steps_goal)/(len(steps_end)+len(steps_goal))}'
+if(len(steps_end)+len(steps_goal) > 0):
+    success_rate = len(steps_goal)/(len(steps_end)+len(steps_goal))
+else:
+    success_rate = 0.0
+txt = f'Evaluation Success Rate: {success_rate}'
 plt.rcParams["figure.figsize"] = (30,20)
 print(txt)
 # plt.plot(rewards_list)
